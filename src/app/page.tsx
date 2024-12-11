@@ -1,5 +1,7 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import {
   TextField,
   MenuItem,
@@ -9,8 +11,10 @@ import {
   Button,
   CircularProgress, // Импортируем CircularProgress для индикатора загрузки
 } from "@mui/material";
+import { useDataContext } from "@/contexts/DataContext";
 
 export default function Home() {
+  const { setData } = useDataContext();
   const [type, setType] = useState("math");
   const [number, setNumber] = useState("");
   const [month, setMonth] = useState("");
@@ -55,19 +59,24 @@ export default function Home() {
     }
   };
 
-  // Функция для выполнения запроса и перенаправления с данными
   const fetchDataAndRedirect = async (type: string, number: string) => {
-    setIsLoading(true); // Устанавливаем isLoading в true перед запросом
+    setIsLoading(true);
     try {
-      const response = await fetch(`http://numbersapi.com/${number}/${type}`);
-      const data = await response.text();
-      router.push(
-        `/info?type=${type}&number=${number}&data=${encodeURIComponent(data)}`
+      const response = await fetch(
+        `/api/numbers?type=${type}&number=${number}`
       );
+      const result = await response.json();
+
+      if (response.ok && result.data) {
+        setData({text: result.data, number: number});
+        router.push("/info");
+      } else {
+        console.error("Ошибка API:", result.error);
+      }
     } catch (error) {
-      console.error("Ошибка запроса:", error);
+      console.log("Ошибка запроса:", error);
     } finally {
-      setIsLoading(false); // Устанавливаем isLoading в false после запроса
+      setIsLoading(false);
     }
   };
 
