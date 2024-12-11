@@ -1,5 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 
+## Project Demo
+
+Для демонстрации работы приложения, посмотрите видео:
+
+[Ссылка на видео](https://drive.google.com/file/d/1GQTkAMUbP8TgMZ5DymduRpaOaeAtFvnN/view)
+
+
 ## Getting Started
 
 First, run the development server:
