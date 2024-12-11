@@ -1,114 +1,167 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import {
+  TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  Button,
+  CircularProgress, // Импортируем CircularProgress для индикатора загрузки
+} from "@mui/material";
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [type, setType] = useState("math");
+  const [number, setNumber] = useState("");
+  const [month, setMonth] = useState("");
+  const [day, setDay] = useState("");
+  const [errors, setErrors] = useState({ month: "", day: "", general: "" });
+  const [isLoading, setIsLoading] = useState(false); // Состояние для отслеживания загрузки
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const handleSubmit = async () => {
+    setErrors({ month: "", day: "", general: "" });
+
+    if (type === "date") {
+      if (!month || !day) {
+        await fetchDataAndRedirect(type, number || "random");
+        return;
+      }
+
+      if (Number(month) < 1 || Number(month) > 12 || isNaN(Number(month))) {
+        setErrors((prev) => ({
+          ...prev,
+          month: "Месяц должен быть от 1 до 12",
+        }));
+        return;
+      }
+      if (Number(day) < 1 || Number(day) > 31 || isNaN(Number(day))) {
+        setErrors((prev) => ({ ...prev, day: "День должен быть от 1 до 31" }));
+        return;
+      }
+
+      const dateStr = `${month}/${day}`;
+      // Запрос данных и передача их в компонент InfoPage
+      await fetchDataAndRedirect(type, dateStr);
+    } else {
+      if (number && isNaN(Number(number))) {
+        setErrors((prev) => ({
+          ...prev,
+          general: "Число должно быть в виде цифры",
+        }));
+        return;
+      }
+      await fetchDataAndRedirect(type, number || "random");
+    }
+  };
+
+  // Функция для выполнения запроса и перенаправления с данными
+  const fetchDataAndRedirect = async (type: string, number: string) => {
+    setIsLoading(true); // Устанавливаем isLoading в true перед запросом
+    try {
+      const response = await fetch(`http://numbersapi.com/${number}/${type}`);
+      const data = await response.text();
+      router.push(
+        `/info?type=${type}&number=${number}&data=${encodeURIComponent(data)}`
+      );
+    } catch (error) {
+      console.error("Ошибка запроса:", error);
+    } finally {
+      setIsLoading(false); // Устанавливаем isLoading в false после запроса
+    }
+  };
+
+  useEffect(() => {
+    if (type === "date") {
+      setNumber("");
+      setErrors({ month: "", day: "", general: "" });
+    } else {
+      setDay("");
+      setMonth("");
+      setErrors({ month: "", day: "", general: "" });
+    }
+  }, [type]);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+      <h1 className="text-2xl font-bold mb-4 text-black">
+        Информация о числах
+      </h1>
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        <FormControl fullWidth>
+          <InputLabel id="select-type-label">
+            Выберите тип информации
+          </InputLabel>
+          <Select
+            labelId="select-type-label"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            label="Выберите тип информации"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            <MenuItem value="math">Math</MenuItem>
+            <MenuItem value="trivia">Trivia</MenuItem>
+            <MenuItem value="date">Date</MenuItem>
+            <MenuItem value="year">Year</MenuItem>
+          </Select>
+        </FormControl>
+
+        {type === "date" ? (
+          <>
+            <div className="flex gap-4">
+              <TextField
+                label="Месяц (1-12)"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                fullWidth
+                error={!!errors.month}
+                helperText={errors.month}
+                type="number"
+              />
+              <TextField
+                label="День (1-31)"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                fullWidth
+                error={!!errors.day}
+                helperText={errors.day}
+                type="number"
+              />
+            </div>
+            <p className="text-gray-600 text-sm font-normal leading-6 tracking-wide text-left mt-[-15px] mr-4 mb-0">
+              Оставьте поля пустыми для случайного числа
+            </p>
+          </>
+        ) : (
+          <>
+            <TextField
+              label="Введите число"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              fullWidth
+              error={!!errors.general}
+              helperText={errors.general}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <p className="text-gray-600 text-sm font-normal leading-6 tracking-wide text-left mt-[-15px] mr-4 mb-0">
+              Оставьте поле пустым для случайного числа
+            </p>
+          </>
+        )}
+
+        {/* Условный рендеринг кнопки или индикатора загрузки */}
+        {isLoading ? (
+          <Button disabled variant="outlined">
+            <CircularProgress size={35} color="primary" />
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            className="p-2 bg-blue-500 text-white rounded hover:bg-blue-700"
           >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            Узнать
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
